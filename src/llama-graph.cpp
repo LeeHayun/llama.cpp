@@ -1,4 +1,5 @@
 #include "llama-graph.h"
+#include "ggml-ubp.h"
 
 #include "llama-impl.h"
 #include "llama-batch.h"
@@ -902,7 +903,15 @@ ggml_tensor * llm_graph_context::build_lora_mm(
           ggml_tensor * w,
           ggml_tensor * cur,
           ggml_tensor * w_s) const {
-    ggml_tensor * res = ggml_mul_mat(ctx0, w, cur);
+    ggml_tensor * res;
+    if (w->type == GGML_TYPE_UBP_F16) {
+        // UBP sparse weight: read n_out from blob header (data is mapped at model-load time)
+        GGML_ASSERT(w->data != nullptr && "UBP blob must be loaded before graph build");
+        const int64_t n_out = (int64_t)ubp_header(w->data)->n_rows;
+        res = ggml_mul_mat_ubp(ctx0, w, cur, n_out);
+    } else {
+        res = ggml_mul_mat(ctx0, w, cur);
+    }
 
     for (const auto & lora : *loras) {
         llama_adapter_lora_weight * lw = lora.first->get_weight(w);
