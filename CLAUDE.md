@@ -47,6 +47,12 @@ fix(cuda): correct memory alignment in MMVQ kernel
 perf(ggml): reduce allocation overhead in metal backend
 ```
 
+## Code Modification Policy
+
+- **Do not modify existing code without explicit instruction.** Only touch files directly related to the current task.
+- When in doubt about scope, ask before making changes.
+- New features go in new files or clearly isolated additions; avoid refactoring unrelated code in the same commit.
+
 ## Build
 
 ```bash
