@@ -886,10 +886,10 @@ static const struct ggml_type_traits type_traits[GGML_TYPE_COUNT] = {
         .to_float                 = (ggml_to_float_t) dequantize_row_tq2_0,
         .from_float_ref           = (ggml_from_float_t) quantize_row_tq2_0_ref,
     },
-    [36] = { // GGML_TYPE_IQ4_NL_4_4
-        .type_name                = "TYPE_IQ4_NL_4_4 REMOVED, use IQ4_NL with runtime repacking",
-        .blck_size                = 0,
-        .type_size                = 0,
+    [GGML_TYPE_UBP_F16] = { // 36 - Unaligned Block-wise Pruning, variable-size CSC blob
+        .type_name                = "ubp_f16",
+        .blck_size                = 1,
+        .type_size                = sizeof(uint8_t), // blob stored as byte array
         .is_quantized             = false,
     },
     [37] = { // GGML_TYPE_IQ4_NL_4_8
@@ -1055,9 +1055,11 @@ static const char * GGML_OP_NAME[GGML_OP_COUNT] = {
     "OPT_STEP_SGD",
 
     "GLU",
+
+    "MUL_MAT_UBP",
 };
 
-static_assert(GGML_OP_COUNT == 96, "GGML_OP_COUNT != 96");
+static_assert(GGML_OP_COUNT == 97, "GGML_OP_COUNT != 97");
 
 static const char * GGML_OP_SYMBOL[GGML_OP_COUNT] = {
     "none",
@@ -1165,9 +1167,11 @@ static const char * GGML_OP_SYMBOL[GGML_OP_COUNT] = {
     "sgd(x)",
 
     "glu(x)",
+
+    "W_ubp*x",
 };
 
-static_assert(GGML_OP_COUNT == 96, "GGML_OP_COUNT != 96");
+static_assert(GGML_OP_COUNT == 97, "GGML_OP_COUNT != 97");
 
 static_assert(GGML_OP_POOL_COUNT == 2, "GGML_OP_POOL_COUNT != 2");
 
@@ -3276,6 +3280,27 @@ struct ggml_tensor * ggml_mul_mat_id(
     result->src[0] = as;
     result->src[1] = b;
     result->src[2] = ids;
+
+    return result;
+}
+
+// ggml_mul_mat_ubp
+
+struct ggml_tensor * ggml_mul_mat_ubp(
+        struct ggml_context * ctx,
+        struct ggml_tensor  * W,
+        struct ggml_tensor  * x,
+        int64_t               n_out) {
+    GGML_ASSERT(W->type == GGML_TYPE_UBP_F16);
+    GGML_ASSERT(x->type == GGML_TYPE_F32);
+
+    // Result shape: [n_out, batch_dims...]
+    const int64_t ne[4] = { n_out, x->ne[1], x->ne[2], x->ne[3] };
+    struct ggml_tensor * result = ggml_new_tensor(ctx, GGML_TYPE_F32, 4, ne);
+
+    result->op     = GGML_OP_MUL_MAT_UBP;
+    result->src[0] = W;
+    result->src[1] = x;
 
     return result;
 }

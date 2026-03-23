@@ -423,7 +423,7 @@ extern "C" {
         // GGML_TYPE_Q4_0_8_8 = 33,
         GGML_TYPE_TQ1_0   = 34,
         GGML_TYPE_TQ2_0   = 35,
-        // GGML_TYPE_IQ4_NL_4_4 = 36,
+        GGML_TYPE_UBP_F16 = 36, // Unaligned Block-wise Pruning (F16 nonzeros, CSC blob)
         // GGML_TYPE_IQ4_NL_4_8 = 37,
         // GGML_TYPE_IQ4_NL_8_8 = 38,
         GGML_TYPE_MXFP4   = 39, // MXFP4 (1 block)
@@ -574,6 +574,8 @@ extern "C" {
         GGML_OP_OPT_STEP_SGD,
 
         GGML_OP_GLU,
+
+        GGML_OP_MUL_MAT_UBP, // SpMV with UBP sparse weight (GGML_TYPE_UBP_F16 blob)
 
         GGML_OP_COUNT,
     };
@@ -1414,6 +1416,17 @@ extern "C" {
     GGML_API void ggml_mul_mat_set_prec(
             struct ggml_tensor * a,
             enum ggml_prec       prec);
+
+    // Unaligned Block-wise Pruning matrix-vector multiply.
+    // W : GGML_TYPE_UBP_F16 1-D tensor containing the UBP blob (see ggml-ubp.h)
+    // x : F32 input tensor  [n_in, batch, ...]
+    // n_out : logical number of output channels (stored in the blob header)
+    // Returns F32 tensor [n_out, batch, ...]
+    GGML_API struct ggml_tensor * ggml_mul_mat_ubp(
+            struct ggml_context * ctx,
+            struct ggml_tensor  * W,
+            struct ggml_tensor  * x,
+            int64_t               n_out);
 
     // indirect matrix multiplication
     GGML_API struct ggml_tensor * ggml_mul_mat_id(
