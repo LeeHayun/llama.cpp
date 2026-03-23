@@ -148,13 +148,10 @@ static std::vector<uint8_t> build_ubp_blob(
         int           N,
         float         sparsity) // fraction of weights to PRUNE (0..1)
 {
-    // Total blocks per column and number to keep.
-    const int blocks_per_col = std::max(0, n_rows - N + 1);
-    const int total_blocks   = blocks_per_col * n_cols;
-    // Number of blocks to KEEP across all columns.
-    const int m_total = std::max(1, (int)std::round(total_blocks * (1.f - sparsity) / N));
-    // Keep roughly equal blocks per column.
-    const int m_per_col = std::max(1, m_total / n_cols);
+    // Number of non-overlapping blocks to keep per column.
+    // sparsity = fraction of weight elements to prune, so keep (1-sparsity)*n_rows elements
+    // per column, which means (1-sparsity)*n_rows/N non-overlapping N-element blocks.
+    const int m_per_col = std::max(1, (int)std::round((float)n_rows * (1.f - sparsity) / (float)N));
 
     // Run BED per column.
     std::vector<std::vector<int32_t>> col_blocks(n_cols);
@@ -177,12 +174,9 @@ static std::vector<uint8_t> build_ubp_blob(
         cptr[j] = (int32_t)ptr;
         for (int32_t row_i : col_blocks[j]) {
             ridx[ptr] = row_i;
-            // WROS rotation: shift data left by (row_i % N)
-            const int rot = row_i % N;
             for (int n = 0; n < N; n++) {
                 float val = ((row_i + n) < n_rows) ? W[(row_i + n) * n_cols + j] : 0.f;
-                int dst_pos = (n + rot) % N;  // rotated position
-                data_f16[ptr * N + dst_pos] = ggml_fp32_to_fp16(val);
+                data_f16[ptr * N + n] = ggml_fp32_to_fp16(val);
             }
             ptr++;
         }

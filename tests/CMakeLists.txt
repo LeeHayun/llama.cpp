@@ -287,3 +287,6 @@ target_include_directories(test-alloc PRIVATE ${PROJECT_SOURCE_DIR}/ggml/src)
 
 llama_build(export-graph-ops.cpp)
 target_include_directories(export-graph-ops PRIVATE ${PROJECT_SOURCE_DIR}/ggml/src)
+
+# UBP kernel correctness and benchmark test
+add_subdirectory(ubp)

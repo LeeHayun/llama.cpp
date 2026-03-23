@@ -3,12 +3,10 @@
 // Implements y = W_ubp * x  using Compressed Sparse Column (CSC) format.
 //
 // WROS (Weight Rotating and Output Stationary) note:
-//   Weights are pre-rotated offline.  For block starting at row r, stored as:
-//     stored[k] = original[(k + r%N) % N]
-//   During inference the output registers remain stationary; only one register
-//   is written to memory per output tile.  The current implementation fully
-//   accumulates each block into the output buffer for correctness; the full
-//   output-stationary optimisation (avoiding the load/store) is a future TODO.
+//   Weights are stored in natural order: stored[n] = W[row_i+n][j].
+//   The kernel accumulates each block into y[row_i..row_i+N-1] directly.
+//   Full WROS output-stationary optimisation (pre-rotate weights, aligned stores)
+//   is a future TODO.
 
 #include "ubp-kernel.h"
 #include "ggml-impl.h"
